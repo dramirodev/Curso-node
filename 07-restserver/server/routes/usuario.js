@@ -9,16 +9,17 @@ app.get('/usuario', (req, res) => {
     const desde = +req.query.desde || 0; // con el más me aseguro que es un número
     const hasta = +req.query.hasta || 5;
     // Para recuperar todos los usuarios
-    Usuario.find({})
+    Usuario.find({}, 'nombre email role estado _id google img') // el segundo parmetro es para los campos que quiero enviar
         .skip(desde)
         .limit(hasta)
         .exec((error, arrayUsuarios) => {
         if (error) {
             return res.status(400).json({ ok: false, error }); // 400 BAD REQUEST
         }
-
-        res.json({ok: true, usuarios: arrayUsuarios});
-    });
+            Usuario.count({}, (error, conteo) => { // el primer parametro {} tiene que ser igual que el del find
+                res.json({ok: true, usuarios: arrayUsuarios, totalUsuarios: conteo});
+        })
+        });
 });
 
 app.post('/usuario', (req, res) => {
