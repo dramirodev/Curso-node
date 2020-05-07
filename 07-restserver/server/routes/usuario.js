@@ -9,14 +9,14 @@ app.get('/usuario', (req, res) => {
     const desde = +req.query.desde || 0; // con el más me aseguro que es un número
     const hasta = +req.query.hasta || 5;
     // Para recuperar todos los usuarios
-    Usuario.find({}, 'nombre email role estado _id google img') // el segundo parmetro es para los campos que quiero enviar
+    Usuario.find({estado: true}, 'nombre email role estado _id google img') // el segundo parmetro es para los campos que quiero enviar
         .skip(desde)
         .limit(hasta)
         .exec((error, arrayUsuarios) => {
         if (error) {
             return res.status(400).json({ ok: false, error }); // 400 BAD REQUEST
         }
-            Usuario.count({}, (error, conteo) => { // el primer parametro {} tiene que ser igual que el del find
+            Usuario.countDocuments({estado: true}, (error, conteo) => { // el primer parametro {} tiene que ser igual que el del find
                 res.json({ok: true, usuarios: arrayUsuarios, totalUsuarios: conteo});
         })
         });
@@ -60,8 +60,26 @@ app.put('/usuario/:id', (req, res) => {
     })
 });
 
-app.delete('/usuario', (req, res) => {
-    res.json('get Usuario Delete');
+app.delete('/usuario/:id', (req, res) => {
+    const id = req.params.id;
+    // Usuario.findByIdAndRemove(id, (error, usuarioBorrado) => {
+    Usuario.findByIdAndUpdate(
+        id,
+        { estado: false },
+        { new: true },
+        (error, usuarioBorrado) => {
+        if (error) {
+            return res.status(400).json({ ok: false, error }); // 400 BAD REQUEST
+        }
+        if (!usuarioBorrado) {
+            return res.status(400).json({ ok: false, message: 'Usuario no encontrado' }); // 400 BAD REQUEST
+        }
+        res.json({
+            ok: true,
+            usuario: usuarioBorrado
+        })
+
+    });
 });
 
 module.exports = app;
