@@ -28,4 +28,21 @@ const verificaAdminRole = (req, res, next) => {
     next();
 }
 
-module.exports ={ verificaToken, verificaAdminRole};
+const verificaTokenImg = (req, res, next) => {
+    const token = req.query.token;
+
+    jwt.verify(token, process.env.SEED , (error, decode) => {
+        if (error) {
+            return res.status(401).json({
+                ok: false,
+                message: 'Token no válido'
+            });
+        }
+
+        req.usuario = decode.usuario;
+        // !Importante si no llamo al next el calback de la ruta no se va a ejecutar
+        next();
+    });
+}
+
+module.exports ={ verificaToken, verificaAdminRole, verificaTokenImg};
