@@ -1,8 +1,9 @@
 const express = require('express');
-const { verificaToken } = require('../middlewares/autenticacion')
 const Producto = require('../models/Producto');
 const Categoria = require('../models/Categoria');
-app = express();
+const { verificaToken } = require('../middlewares/autenticacion')
+
+const app = express();
 
 app.get('/productos', verificaToken, (req, res) => {
 
@@ -53,46 +54,76 @@ app.get('/producto/:id', verificaToken, (req, res) => {
 
 })
 
+//Buscar Productos
+
+app.get('/productos/buscar/:termino', verificaToken, (req, res) => {
+    const termino = req.params.termino;
+    const regex = new RegExp(termino, 'i');
+    Producto.find({ nombre: regex, disponible: true })
+        .populate('categoria', 'nombre')
+        .exec((error, productos) => {
+            if (error) {
+                return res.status(400).json({ ok: false, error });
+                }
+
+            res.json(productos);
+        });
+});
+
 app.post('/producto', verificaToken, (req, res) => {
     const usuario = req.usuario;
     const {nombre,
         precioUni,
         descripcion,
         categoria,
+        disponible
     } = req.body;
-    let idCategoria;
 
-    Categoria.findOne({ nombre: categoria }, (error, categoria) => {
-        if (error) {
-                return res.status(400).json({ ok: false, error });
-        }
-
-        idCategoria = categoria._id;
-    })
-
-    const prouducto = new Producto({
+        const prouducto = new Producto({
         nombre,
         precioUni,
         descripcion,
-        categoria: idCategoria,
+        disponible,
+        categoria,
         usuario: usuario._id
     });
 
     prouducto.save((error, producto) => {
         if (error) {
-            return res.status(400).json({ ok: false, error });
+            return res.status(500).json({ ok: false, error });
         }
 
-        res.json(producto);
+        res.status(201).json({ok: true,producto});
     });
 });
 
 app.put('/producto/:id', verificaToken, (req, res) => {
-    const body = req.body;
+    const usuarioId = req.usuario._id;
     const id = req.params.id;
+    const {nombre,
+        precioUni,
+        descripcion,
+        categoria,
+        disponible
+    } = req.body;
 
-    Producto.findOneAndUpdate(id,
-        body,
+
+    Producto.findById(id, (error, producto) => {
+        if (error) {
+            return res.status(400).json({ ok: false, error });
+        }
+
+        const productoActualizado = {
+            nombre: nombre || producto.nombre,
+            precioUni: precioUni || producto.precioUni,
+            descripcion: descripcion || producto.descripcion,
+            categoria: categoria || producto.categoria,
+            disponible: disponible || producto.disponible,
+            usuario: usuarioId
+        }
+
+        Producto.findOneAndUpdate({_id: producto._id},
+        productoActualizado,
         {
             new: true,
             runValidators: true,
@@ -109,6 +140,8 @@ app.put('/producto/:id', verificaToken, (req, res) => {
             res.json({ ok: true, producto });
          }
     )
+
+    });
 });
 
 app.delete('/producto/:id', verificaToken, (req, res) => {
